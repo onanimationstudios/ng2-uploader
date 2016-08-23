@@ -1,16 +1,16 @@
-import {Injectable, EventEmitter} from "@angular/core";
+import {Injectable, EventEmitter} from '@angular/core';
 
-class UploadedFile {
-  public id: string;
-  public status: number;
-  public statusText: string;
-  public progress: Object;
-  public originalName: string;
-  public size: number;
-  public response: string;
-  public done: boolean;
-  public error: boolean;
-  public abort: boolean;
+export class UploadedFile {
+  id: string;
+  status: number;
+  statusText: string;
+  progress: Object;
+  originalName: string;
+  size: number;
+  response: string;
+  done: boolean;
+  error: boolean;
+  abort: boolean;
 
   constructor(id: string, originalName: string, size: number) {
     this.id = id;
@@ -26,21 +26,21 @@ class UploadedFile {
     this.abort = false;
   }
 
-  public setProgres(progress: Object): void {
+  setProgres(progress: Object): void {
     this.progress = progress;
   }
 
-  public setError(): void {
+  setError(): void {
     this.error = true;
     this.done = true;
   }
 
-  public setAbort(): void {
+  setAbort(): void {
     this.abort = true;
     this.done = true;
   }
 
-  public onFinished(status: number, statusText: string, response: string): void {
+  onFinished(status: number, statusText: string, response: string): void {
     this.status = status;
     this.statusText = statusText;
     this.response = response;
@@ -50,30 +50,29 @@ class UploadedFile {
 
 @Injectable()
 export class Ng2Uploader {
-  public url: string;
-  public cors: boolean = false;
-  public withCredentials: boolean = false;
-  public multiple: boolean = false;
-  public maxUploads: number = 3;
-  public allowedExtensions: string[] = [];
-  public maxSize: boolean = false;
-  public data: Object = {};
-  public noParams: boolean = true;
-  public autoUpload: boolean = true;
-  public multipart: boolean = true;
-  public method: string = "POST";
-  public debug: boolean = false;
-  public customHeaders: Object = {};
-  public encodeHeaders: boolean = true;
-  public authTokenPrefix: string = "Bearer";
-  public authToken: string = undefined;
-  public fieldName: string = "file";
-  public extraFormData: any = [];
-  public _emitter: EventEmitter<any> = new EventEmitter(true);
+  url: string;
+  cors: boolean = false;
+  withCredentials: boolean = false;
+  multiple: boolean = false;
+  maxUploads: number = 3;
+  allowedExtensions: string[] = [];
+  maxSize: boolean = false;
+  data: Object = {};
+  noParams: boolean = true;
+  autoUpload: boolean = true;
+  multipart: boolean = true;
+  method: string = 'POST';
+  debug: boolean = false;
+  customHeaders: any = {};
+  encodeHeaders: boolean = true;
+  authTokenPrefix: string = "Bearer";
+  authToken: string = undefined;
+  fieldName: string = "file";
 
-  private _queue: any[] = [];
+  _queue: any[] = [];
+  _emitter: EventEmitter<any> = new EventEmitter(true);
 
-  public setOptions(options: any): void {
+  setOptions(options: any): void {
 
     this.url = options.url != null ? options.url : this.url;
     this.cors = options.cors != null ? options.cors : this.cors;
@@ -93,64 +92,33 @@ export class Ng2Uploader {
     this.authTokenPrefix = options.authTokenPrefix != null ? options.authTokenPrefix : this.authTokenPrefix;
     this.authToken = options.authToken != null ? options.authToken : this.authToken;
     this.fieldName = options.fieldName != null ? options.fieldName : this.fieldName;
-    this.extraFormData = options.extraFormData != null ? options.extraFormData : this.extraFormData;
 
     if (!this.multiple) {
       this.maxUploads = 1;
     }
   }
 
-  public addFilesToQueue(files: FileList[]): void {
-    for (let file of files) {
-      if (this.isFile(file) && !this.inQueue(file)) {
-        this._queue.push(file);
-      }
-    }
-
-    if (this.autoUpload) {
-      this.uploadFilesInQueue();
-    }
-  }
-
-  public clearQueue(): void {
-    this._queue = [];
-  }
-
-  public getQueueSize(): number {
-    return this._queue.length;
-  }
-
-  public log(msg: any): void {
-    if (!this.debug) {
-      return;
-    }
-    console.log("[Ng2Uploader]:", msg);
-  }
-
-  private uploadFilesInQueue(): void {
+  uploadFilesInQueue(): void {
     let newFiles = this._queue.filter((f) => { return !f.uploading; });
     newFiles.forEach((f) => {
       this.uploadFile(f);
     });
   };
 
-  private uploadFile(file: any): void {
+  uploadFile(file: any): void {
     let xhr = new XMLHttpRequest();
     let form = new FormData();
-    this.extraFormData.forEach((pair) => {
-      form.append(pair[0], pair[1]);
-    });
     form.append(this.fieldName, file, file.name);
 
     let uploadingFile = new UploadedFile(
-      this.generateRandomIndex(),
-      file.name,
-      file.size
+        this.generateRandomIndex(),
+        file.name,
+        file.size
     );
 
     let queueIndex = this._queue.indexOf(file);
 
-    xhr.upload.onprogress = (e) => {
+    xhr.upload.onprogress = (e: ProgressEvent) => {
       if (e.lengthComputable) {
         let percent = Math.round(e.loaded / e.total * 100);
         uploadingFile.setProgres({
@@ -163,12 +131,12 @@ export class Ng2Uploader {
       }
     };
 
-    xhr.upload.onabort = (e) => {
+    xhr.upload.onabort = (e: Event) => {
       uploadingFile.setAbort();
       this._emitter.emit(uploadingFile);
     };
 
-    xhr.upload.onerror = (e) => {
+    xhr.upload.onerror = (e: Event) => {
       uploadingFile.setError();
       this._emitter.emit(uploadingFile);
     };
@@ -176,9 +144,9 @@ export class Ng2Uploader {
     xhr.onreadystatechange = () => {
       if (xhr.readyState === XMLHttpRequest.DONE) {
         uploadingFile.onFinished(
-          xhr.status,
-          xhr.statusText,
-          xhr.response
+            xhr.status,
+            xhr.statusText,
+            xhr.response
         );
         this.removeFileFromQueue(queueIndex);
         this._emitter.emit(uploadingFile);
@@ -201,21 +169,51 @@ export class Ng2Uploader {
     xhr.send(form);
   }
 
-  private removeFileFromQueue(i: number): void {
+  addFilesToQueue(files: FileList): void {
+    let index: number, file: File;
+
+    for (index = 0; index < files.length; index++) {
+      file = files.item(index);
+      if (this.isFile(file) && !this.inQueue(file)) {
+        this._queue.push(file);
+      }
+    }
+
+    if (this.autoUpload) {
+      this.uploadFilesInQueue();
+    }
+  }
+
+  removeFileFromQueue(i: number): void {
     this._queue.splice(i, 1);
   }
 
-  private generateRandomIndex(): string {
-    return Math.random().toString(36).substring(7);
+  clearQueue(): void {
+    this._queue = [];
   }
 
-  private inQueue(file: any): boolean {
+  getQueueSize(): number {
+    return this._queue.length;
+  }
+
+  inQueue(file: any): boolean {
     let fileInQueue = this._queue.filter((f) => { return f === file; });
     return fileInQueue.length ? true : false;
   }
 
-  private isFile(file: any): boolean {
+  isFile(file: any): boolean {
     return file !== null && (file instanceof Blob || (file.name && file.size));
+  }
+
+  log(msg: any): void {
+    if (!this.debug) {
+      return;
+    }
+    console.log('[Ng2Uploader]:', msg);
+  }
+
+  generateRandomIndex(): string {
+    return Math.random().toString(36).substring(7);
   }
 
 }
