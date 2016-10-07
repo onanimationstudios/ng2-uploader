@@ -8,6 +8,11 @@
     "module": "es6",
     "moduleResolution": "node",
     "sourceMap": true,
+    "sourceRoot": "./",
     "target": "es5"
-  }
+  },
+  "files": [
+    "typings/index.d.ts",
+    "ng2-uploader.ts"
+  ]
 }
