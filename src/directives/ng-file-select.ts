@@ -1,16 +1,36 @@
-import {Directive, ElementRef, EventEmitter} from '@angular/core';
-import {Ng2Uploader} from '../services/ng2-uploader';
+import {
+  Directive,
+  ElementRef,
+  EventEmitter,
+  Input,
+  Output,
+  HostListener
+} from '@angular/core';
+import { Ng2Uploader } from '../services/ng2-uploader';
 
 @Directive({
-  selector: '[ng-file-select]',
-  inputs: ['options: ng-file-select'],
-  outputs: ['onUpload'],
-  host: { '(change)': 'onFiles()' }
+  selector: '[ngFileSelect]'
 })
-export class NgFileSelect {
+export class NgFileSelectDirective {
+  
+  @Input() events: EventEmitter<any>;
+  @Output() onUpload: EventEmitter<any> = new EventEmitter();
+  @Output() onPreviewData: EventEmitter<any> = new EventEmitter();
+  
+  _options:any;
+
+  get options(): any {
+    return this._options;
+  }
+
+  @Input('options')
+  set options(value: any) {
+    this._options = value;
+    this.uploader.setOptions(this.options);
+  }
+
+  files: any[] = [];
   uploader: Ng2Uploader;
-  options: any;
-  onUpload: EventEmitter<any> = new EventEmitter();
 
   constructor(public el: ElementRef) {
     this.uploader = new Ng2Uploader();
@@ -20,13 +40,52 @@ export class NgFileSelect {
 
     this.uploader._emitter.subscribe((data: any) => {
       this.onUpload.emit(data);
+      if (data.done) {
+        this.files = this.files.filter(f => f.name !== data.originalName);
+        if (this.uploader.fieldReset) {
+          this.el.nativeElement.value = '';
+        }
+      }
+    });
+
+    this.uploader._previewEmitter.subscribe((data: any) => {
+      this.onPreviewData.emit(data);
+    });
+
+    setTimeout(() => {
+      if (this.events) {
+        this.events.subscribe((data: string) => {
+          if (data === 'startUpload') {
+            this.uploader.uploadFilesInQueue();
+          }
+        });
+      }
     });
   }
 
-  onFiles(): void {
-    let files = this.el.nativeElement.files;
-    if (files.length) {
-      this.uploader.addFilesToQueue(files);
+  filterFilesByExtension(): void {
+    this.files = this.files.filter(f => {
+      if (this.options.allowedExtensions.indexOf(f.type) !== -1) {
+        return true;
+      }
+
+      let ext: string = f.name.split('.').pop();
+      if (this.options.allowedExtensions.indexOf(ext) !== -1 ) {
+        return true;
+      }
+
+      return false;
+    });
+  }
+
+  @HostListener('change') onChange(): void {
+    this.files = Array.from(this.el.nativeElement.files);
+    if (this.options.filterExtensions && this.options.allowedExtensions) {
+      this.filterFilesByExtension();
+    }
+
+    if (this.files.length) {
+      this.uploader.addFilesToQueue(this.files);
     }
   }
 }
